@@ -12,7 +12,7 @@ template <typename T> class MediaClass {
   public:
     virtual const gchar* get_media_class_name() const = 0;
     virtual const char* get_icon(gdouble volume, gboolean mute) const = 0;
-    virtual const char* get_notification_title() const = 0;
+    virtual const char* get_notification_title(gdouble volume) const = 0;
 
     static T* get_instance() {
         if (!instance) {
@@ -39,8 +39,10 @@ class MediaClassSink : public MediaClass<MediaClassSink> {
         return icons[std::clamp((std::size_t)(volume * 3), (std::size_t)0., (std::size_t)2.)];
     }
 
-    const char* get_notification_title() const {
-        return "Output Device";
+    const char* get_notification_title(gdouble volume) const {
+        const int buffer_size = 6;
+        gchar buffer[buffer_size];
+        return g_ascii_dtostr(buffer, buffer_size, volume * 100);
     }
 };
 
@@ -54,7 +56,7 @@ class MediaClassSource : public MediaClass<MediaClassSource> {
         return "audio-input-microphone";
     }
 
-    const char* get_notification_title() const {
+    const char* get_notification_title(gdouble volume) const {
         return "Input Device";
     }
 };
@@ -136,7 +138,7 @@ class Wireplumber {
         }
 
         void show_notification() {
-            notify_notification_update(notify, NodeMediaClass::get_instance()->get_notification_title(), name,
+            notify_notification_update(notify, NodeMediaClass::get_instance()->get_notification_title(volume), name,
                                        NodeMediaClass::get_instance()->get_icon(volume, mute));
             notify_notification_set_hint_int32(notify, "value", !mute * (gint)(volume * 100));
             notify_notification_show(notify, NULL);
